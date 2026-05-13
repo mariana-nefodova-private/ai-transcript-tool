@@ -290,8 +290,8 @@
     let resp;
     try {
       resp = await fetch("/transcribe", { method: "POST", body: formData });
-    } catch {
-      showError("Could not reach the server. Is the app running?");
+    } catch (err) {
+      showError("Upload failed: " + err.message + " — make sure the app is still running in Terminal.");
       reset();
       return;
     }

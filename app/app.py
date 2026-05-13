@@ -114,9 +114,17 @@ PORT = 7654
 if __name__ == "__main__":
     import socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        if s.connect_ex(("localhost", PORT)) == 0:
+        if s.connect_ex(("127.0.0.1", PORT)) == 0:
             print(f"\n ERROR: Port {PORT} is already in use.")
             print("Close any other running instance of this app and try again.\n")
             raise SystemExit(1)
-    webbrowser.open(f"http://localhost:{PORT}")
-    app.run(debug=False, port=PORT, threaded=True)
+
+    # Open browser after Flask has had time to start
+    def _open_browser():
+        import time
+        time.sleep(1.5)
+        webbrowser.open(f"http://localhost:{PORT}")
+
+    threading.Thread(target=_open_browser, daemon=True).start()
+    # host="0.0.0.0" so Flask accepts both IPv4 and IPv6 localhost
+    app.run(debug=False, host="0.0.0.0", port=PORT, threaded=True)
