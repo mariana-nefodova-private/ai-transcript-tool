@@ -109,6 +109,14 @@ def download(job_id):
     )
 
 
+PORT = 7654
+
 if __name__ == "__main__":
-    webbrowser.open("http://localhost:5000")
-    app.run(debug=False, port=5000, threaded=True)
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(("localhost", PORT)) == 0:
+            print(f"\n ERROR: Port {PORT} is already in use.")
+            print("Close any other running instance of this app and try again.\n")
+            raise SystemExit(1)
+    webbrowser.open(f"http://localhost:{PORT}")
+    app.run(debug=False, port=PORT, threaded=True)

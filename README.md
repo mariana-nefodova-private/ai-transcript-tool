@@ -42,7 +42,7 @@ Every time you want to use the app:
 cd ~/AI-trascript-tool && source venv/bin/activate && python app/app.py
 ```
 
-**Step 2 — Your browser opens automatically** at `http://localhost:5000`
+**Step 2 — Your browser opens automatically** at `http://localhost:7654`
 
 **Step 3 — Upload your MP4**
 
@@ -68,7 +68,7 @@ When done, go back to Terminal and press `Ctrl + C`.
 Make sure you ran the setup script first. Try running it again.
 
 **Browser doesn't open automatically?**
-Open your browser manually and go to `http://localhost:5000`
+Open your browser manually and go to `http://localhost:7654`
 
 **Transcription seems slow?**
 This is normal for long recordings. A 1-hour MP4 takes roughly 10–15 minutes. Do not close the browser tab while it's running.
