@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Transcript Tool</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 64px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    header p {
+      margin-top: 8px;
+      font-size: 15px;
+      color: #6e6e73;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      padding: 32px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      border: 2px dashed #c7c7cc;
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: #0071e3;
+      background: #f0f7ff;
+    }
+    #drop-zone svg {
+      display: block;
+      margin: 0 auto 16px;
+      opacity: 0.4;
+    }
+    #drop-zone p {
+      font-size: 16px;
+      color: #6e6e73;
+    }
+    #drop-zone strong {
+      color: #0071e3;
+    }
+    #file-input { display: none; }
+
+    #file-name {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #1d1d1f;
+      font-weight: 500;
+      min-height: 20px;
+    }
+
+    /* Button */
+    #transcribe-btn {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      background: #0071e3;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 500;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #transcribe-btn:hover:not(:disabled) { background: #0077ed; }
+    #transcribe-btn:disabled { background: #b0b0b5; cursor: not-allowed; }
+
+    /* Progress */
+    #progress-section { display: none; margin-top: 28px; }
+
+    #progress-label {
+      font-size: 14px;
+      color: #6e6e73;
+      margin-bottom: 8px;
+    }
+    #progress-bar-track {
+      height: 8px;
+      background: #e5e5ea;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #0071e3;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    #progress-bar-fill.indeterminate {
+      width: 40% !important;
+      animation: slide 1.4s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(300%); }
+    }
+
+    /* Result */
+    #result-section { display: none; margin-top: 28px; }
+
+    #result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    #result-header span { font-weight: 600; font-size: 15px; }
+
+    .action-buttons { display: flex; gap: 8px; }
+
+    .btn-secondary {
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      border: 1.5px solid #c7c7cc;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .btn-secondary:hover { border-color: #0071e3; color: #0071e3; }
+
+    #copy-btn.copied {
+      border-color: #34c759;
+      color: #34c759;
+    }
+
+    #transcript-box {
+      width: 100%;
+      height: 380px;
+      padding: 16px;
+      font-family: "SF Mono", "Fira Code", "Menlo", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      border: 1.5px solid #e5e5ea;
+      border-radius: 10px;
+      resize: vertical;
+      background: #fafafa;
+      color: #1d1d1f;
+      outline: none;
+    }
+    #transcript-box:focus { border-color: #0071e3; }
+
+    /* Error */
+    #error-msg {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #fff2f2;
+      border: 1px solid #ffb3b3;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #cc0000;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>AI Transcript Tool</h1>
+  <p>Transcribe MP4 meeting recordings to timestamped text &nbsp;🇺🇦&nbsp;🇬🇧</p>
+</header>
+
+<div class="card">
+
+  <div id="drop-zone">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1d1d1f" stroke-width="1.5">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p><strong>Click to choose</strong> or drag an MP4 file here</p>
+    <input type="file" id="file-input" accept=".mp4,video/mp4" />
+  </div>
+
+  <p id="file-name"></p>
+
+  <button id="transcribe-btn" disabled>Transcribe</button>
+
+  <div id="progress-section">
+    <p id="progress-label">Starting…</p>
+    <div id="progress-bar-track">
+      <div id="progress-bar-fill"></div>
+    </div>
+  </div>
+
+  <div id="error-msg"></div>
+
+  <div id="result-section">
+    <div id="result-header">
+      <span>Transcript</span>
+      <div class="action-buttons">
+        <button class="btn-secondary" id="copy-btn">Copy all</button>
+        <button class="btn-secondary" id="download-btn">Download .txt</button>
+      </div>
+    </div>
+    <textarea id="transcript-box" readonly></textarea>
+  </div>
+
+</div>
+
+<script>
+  const dropZone       = document.getElementById("drop-zone");
+  const fileInput      = document.getElementById("file-input");
+  const fileNameEl     = document.getElementById("file-name");
+  const transcribeBtn  = document.getElementById("transcribe-btn");
+  const progressSec    = document.getElementById("progress-section");
+  const progressLabel  = document.getElementById("progress-label");
+  const progressFill   = document.getElementById("progress-bar-fill");
+  const resultSec      = document.getElementById("result-section");
+  const transcriptBox  = document.getElementById("transcript-box");
+  const copyBtn        = document.getElementById("copy-btn");
+  const downloadBtn    = document.getElementById("download-btn");
+  const errorMsg       = document.getElementById("error-msg");
+
+  let selectedFile = null;
+  let currentJobId = null;
+  let pollInterval = null;
+
+  // --- File selection ---
+  dropZone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => setFile(fileInput.files[0]));
+
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.classList.add("drag-over");
+  });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("drag-over");
+    const f = e.dataTransfer.files[0];
+    if (f && f.name.toLowerCase().endsWith(".mp4")) setFile(f);
+    else showError("Please drop an MP4 file.");
+  });
+
+  function setFile(file) {
+    if (!file) return;
+    selectedFile = file;
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    fileNameEl.textContent = `${file.name}  (${mb} MB)`;
+    transcribeBtn.disabled = false;
+    hideError();
+    resultSec.style.display = "none";
+  }
+
+  // --- Transcribe ---
+  transcribeBtn.addEventListener("click", async () => {
+    if (!selectedFile) return;
+
+    transcribeBtn.disabled = true;
+    hideError();
+    resultSec.style.display = "none";
+    progressSec.style.display = "block";
+    setProgress(0, "Uploading file…");
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    let resp;
+    try {
+      resp = await fetch("/transcribe", { method: "POST", body: formData });
+    } catch {
+      showError("Could not reach the server. Is the app running?");
+      reset();
+      return;
+    }
+
+    const data = await resp.json();
+    if (!resp.ok) { showError(data.error || "Upload failed."); reset(); return; }
+
+    currentJobId = data.job_id;
+    pollInterval = setInterval(poll, 2000);
+  });
+
+  async function poll() {
+    if (!currentJobId) return;
+    let data;
+    try {
+      const r = await fetch(`/status/${currentJobId}`);
+      data = await r.json();
+    } catch { return; }
+
+    if (data.status === "running") {
+      const pct = data.progress || 0;
+      setProgress(pct, data.message || "Processing…");
+      // Use indeterminate bar during the long transcription phase (20–95%)
+      if (pct >= 20 && pct < 95) {
+        progressFill.classList.add("indeterminate");
+      } else {
+        progressFill.classList.remove("indeterminate");
+      }
+    } else if (data.status === "done") {
+      clearInterval(pollInterval);
+      progressFill.classList.remove("indeterminate");
+      setProgress(100, "Done!");
+      await showResult();
+    } else if (data.status === "error") {
+      clearInterval(pollInterval);
+      showError("Transcription failed: " + (data.message || "unknown error"));
+      reset();
+    }
+  }
+
+  async function showResult() {
+    const r = await fetch(`/result/${currentJobId}`);
+    const data = await r.json();
+    transcriptBox.value = data.transcript;
+    resultSec.style.display = "block";
+    transcribeBtn.disabled = false;
+  }
+
+  // --- Copy ---
+  copyBtn.addEventListener("click", () => {
+    navigator.clipboard.writeText(transcriptBox.value).then(() => {
+      copyBtn.textContent = "Copied!";
+      copyBtn.classList.add("copied");
+      setTimeout(() => {
+        copyBtn.textContent = "Copy all";
+        copyBtn.classList.remove("copied");
+      }, 2000);
+    });
+  });
+
+  // --- Download ---
+  downloadBtn.addEventListener("click", () => {
+    if (currentJobId) window.location.href = `/download/${currentJobId}`;
+  });
+
+  // --- Helpers ---
+  function setProgress(pct, msg) {
+    progressLabel.textContent = msg;
+    progressFill.style.width = pct + "%";
+  }
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.style.display = "block";
+  }
+
+  function hideError() {
+    errorMsg.style.display = "none";
+  }
+
+  function reset() {
+    progressSec.style.display = "none";
+    transcribeBtn.disabled = (selectedFile === null);
+    clearInterval(pollInterval);
+  }
+</script>
+</body>
+</html>
